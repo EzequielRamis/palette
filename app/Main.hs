@@ -9,6 +9,32 @@ type Coord = (Double, Double, Double)
 
 type Coord' = (Natural, Natural, Natural)
 
+type Config = (Double, Double, Ease)
+
+data Ease
+  = Line
+  | InQuad
+  | InCubic
+  | InQuart
+  | InQuint
+  | InSine
+  | InExpo
+  | InCirc
+  | OutQuad
+  | OutCubic
+  | OutQuart
+  | OutQuint
+  | OutSine
+  | OutExpo
+  | OutCirc
+  | InOutQuad
+  | InOutCubic
+  | InOutQuart
+  | InOutQuint
+  | InOutSine
+  | InOutExpo
+  | InOutCirc
+
 main :: IO ()
 main = print $ rgb2oklab (255, 255, 255)
 
@@ -16,7 +42,7 @@ padr :: Int -> String -> String
 padr n h = let l = length h in take (n - l) ['0' ..] ++ h
 
 rgb2hex :: Coord' -> String
-rgb2hex (r, g, b) = concatMap (padr 2 . hex) [r, g, b]
+rgb2hex (r, g, b) = "#" ++ concatMap (padr 2 . hex) [r, g, b]
 
 hex :: Natural -> String
 hex n =
@@ -90,6 +116,7 @@ oklab2oklch (l, a, b) = (l, sqrt (a ** 2 + b ** 2), atan2 b a)
 
 oklch2oklab :: Coord -> Coord
 oklch2oklab (l, c, h) = (l, c * cos h, c * sin h)
+-- oklch2oklab (l, c, h) = let d = h * pi / 180 in (l, c * cos d, c * sin d)
 
 oklch2rgb' :: Coord -> Coord'
 oklch2rgb' = oklab2rgb . oklch2oklab
@@ -115,3 +142,53 @@ oklch2rgb c =
 
 oklch2hex :: Coord -> IO (Maybe String)
 oklch2hex c = (rgb2hex <$>) <$> oklch2rgb c
+
+-- x \in [0,1]
+ease :: Ease -> Double -> Double
+ease Line x = x
+ease InQuad x = x ** 2
+ease InCubic x = x ** 3
+ease InQuart x = x ** 4
+ease InQuint x = x ** 5
+ease InSine x = cos (x * pi / 2)
+ease InExpo 0 = 0
+ease InExpo x = 2 ** (10 * x - 10)
+ease InCirc x = 1 - sqrt (1 - x ** 2)
+--
+ease OutQuad x = 1 - (1 - x) ** 2
+ease OutCubic x = 1 - (1 - x) ** 3
+ease OutQuart x = 1 - (1 - x) ** 4
+ease OutQuint x = 1 - (1 - x) ** 5
+ease OutSine x = sin (x * pi / 2)
+ease OutExpo 1 = 1
+ease OutExpo x = 1 - 2 ** (-10 * x)
+ease OutCirc x = sqrt (1 - (x - 1) ** 2)
+--
+ease InOutQuad x = if x < 0.5 then 2 * x ** 2 else 1 - (-2 * x + 2) ** 2 / 2
+ease InOutCubic x = if x < 0.5 then 4 * x ** 3 else 1 - (-2 * x + 2) ** 3 / 2
+ease InOutQuart x = if x < 0.5 then 8 * x ** 4 else 1 - (-2 * x + 2) ** 4 / 2
+ease InOutQuint x = if x < 0.5 then 16 * x ** 5 else 1 - (-2 * x + 2) ** 5 / 2
+ease InOutSine x = -(cos (pi * x) - 1) / 2
+ease InOutExpo 0 = 0
+ease InOutExpo 1 = 1
+ease InOutExpo x = if x < 0.5 then 2 ** (20 * x - 10) / 2 else (2 - 2 ** (-20 * x + 10)) / 2
+ease InOutCirc x = if x < 0.5 then (1 - sqrt (1 - (2 * x) ** 2)) / 2 else (sqrt (1 - (-2 * x + 2) ** 2) + 1) / 2
+
+sample :: Double -> Double -> Natural -> [Double]
+sample _ _ 0 = []
+sample from _ 1 = [from]
+sample from to resolution
+  | from == to = replicate (fromIntegral resolution) from
+  | otherwise = enumFromThenTo from (from + (to - from) / fromIntegral (resolution - 1)) to
+
+-- lightness \in [0,1]
+-- chroma \in [0,?]
+-- hue \in [0,2pi]
+
+curve :: Natural -> Config -> [Double]
+curve r (f, t, e)
+  | f == t = sample f t r
+  | otherwise = map (\x -> ease e ((x - f) / (t - f)) * (t - f) + f) $ sample f t r
+
+genPalette :: Config -> Config -> Config -> Natural -> IO [Maybe String]
+genPalette l c h r = mapM oklch2hex $ zip3 (curve r l) (curve r c) (curve r h)
