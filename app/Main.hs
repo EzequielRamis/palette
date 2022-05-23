@@ -256,6 +256,6 @@ toClipboard s =
     createProcess_ "toClipboard" $
       shell $ "echo " ++ show s ++ " | xclip"
 
-genHuetone :: String -> [(Config, Config, Config)] -> Natural -> IO ()
-genHuetone n ht ts =
+genHuetone :: String -> Natural -> [(Config, Config, Config)] -> IO ()
+genHuetone n ts ht =
   (toClipboard . encode) =<< genHuetone' n ht ts
