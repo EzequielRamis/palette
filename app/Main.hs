@@ -1,15 +1,31 @@
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DuplicateRecordFields #-}
+
 module Main where
 
 import Control.Exception (ArithException, evaluate, try)
+import Control.Monad ((=<<))
+import Data.Aeson
+  ( ToJSON (toEncoding),
+    defaultOptions,
+    encode,
+    genericToEncoding,
+  )
+import qualified Data.ByteString.Lazy as B
+import Data.ByteString.Lazy.Char8 (unpack)
 import Data.Either (rights)
-import Data.Maybe (maybe)
+import Data.Functor (void)
+import Data.Maybe (fromMaybe, maybe)
+import GHC.Generics (Generic)
+import GHC.IO.Handle (hGetContents)
 import GHC.Num.Natural (Natural)
+import System.Process (createProcess_, shell)
 
 type Coord = (Double, Double, Double)
 
 type Coord' = (Natural, Natural, Natural)
 
-type Config = (Double, Double, Ease)
+type Config = (Double, Double, Double -> Double)
 
 data Ease
   = Line
@@ -35,6 +51,25 @@ data Ease
   | InOutExpo
   | InOutCirc
 
+data Hue = H
+  { name :: String,
+    colors :: [String]
+  }
+  deriving (Generic, Show)
+
+data Huetone = HT
+  { name :: String,
+    hues :: [Hue],
+    tones :: [String]
+  }
+  deriving (Generic, Show)
+
+instance ToJSON Hue where
+  toEncoding = genericToEncoding defaultOptions
+
+instance ToJSON Huetone where
+  toEncoding = genericToEncoding defaultOptions
+
 main :: IO ()
 main = print $ rgb2oklab (255, 255, 255)
 
@@ -53,12 +88,12 @@ hex n =
           r = mod n 16
        in hex d ++ hex' r
 
-hex' 10 = "a"
-hex' 11 = "b"
-hex' 12 = "c"
-hex' 13 = "d"
-hex' 14 = "e"
-hex' 15 = "f"
+hex' 10 = "A"
+hex' 11 = "B"
+hex' 12 = "C"
+hex' 13 = "D"
+hex' 14 = "E"
+hex' 15 = "F"
 hex' n = show n
 
 -- https://gist.github.com/jjrv/b27d0840b4438502f9cad2a0f9edeabc implementation
@@ -115,8 +150,8 @@ oklab2oklch :: Coord -> Coord
 oklab2oklch (l, a, b) = (l, sqrt (a ** 2 + b ** 2), atan2 b a)
 
 oklch2oklab :: Coord -> Coord
-oklch2oklab (l, c, h) = (l, c * cos h, c * sin h)
--- oklch2oklab (l, c, h) = let d = h * pi / 180 in (l, c * cos d, c * sin d)
+-- oklch2oklab (l, c, h) = (l, c * cos h, c * sin h)
+oklch2oklab (l, c, h) = let d = h * pi / 180 in (l / 100, c * cos d, c * sin d)
 
 oklch2rgb' :: Coord -> Coord'
 oklch2rgb' = oklab2rgb . oklch2oklab
@@ -137,8 +172,8 @@ oklch2rgb c =
         if length valids == 3 && all (< 256) valids
           then
             let [o0, o1, o2] = valids
-             in pure $ Just (o0, o1, o2)
-          else pure Nothing
+             in return $ Just (o0, o1, o2)
+          else return Nothing
 
 oklch2hex :: Coord -> IO (Maybe String)
 oklch2hex c = (rgb2hex <$>) <$> oklch2rgb c
@@ -188,7 +223,39 @@ sample from to resolution
 curve :: Natural -> Config -> [Double]
 curve r (f, t, e)
   | f == t = sample f t r
-  | otherwise = map (\x -> ease e ((x - f) / (t - f)) * (t - f) + f) $ sample f t r
+  | otherwise = map (\x -> e ((x - f) / (t - f)) * (t - f) + f) $ sample f t r
 
-genPalette :: Config -> Config -> Config -> Natural -> IO [Maybe String]
-genPalette l c h r = mapM oklch2hex $ zip3 (curve r l) (curve r c) (curve r h)
+genHue :: Natural -> (Config, Config, Config) -> IO [Maybe String]
+genHue r (l, c, h) = mapM oklch2hex $ zip3 (curve r l) (curve r c) (curve r h)
+
+genHuetone' :: String -> [(Config, Config, Config)] -> Natural -> IO Huetone
+genHuetone' n hs ts =
+  let lh = length hs
+      ts' = fromIntegral ts
+   in do
+        hs' <- mapM (genHue ts) hs
+        return
+          HT
+            { name = n,
+              hues =
+                zipWith
+                  ( \i h ->
+                      H
+                        { name = (padr (lh - 1) . hex) i,
+                          colors = map (fromMaybe "#000000") h
+                        }
+                  )
+                  [0 .. fromIntegral lh - 1]
+                  hs',
+              tones = map (padr (length $ hex (ts' - 1)) . hex) [0 .. ts - 1]
+            }
+
+toClipboard :: B.ByteString -> IO ()
+toClipboard s =
+  void $
+    createProcess_ "toClipboard" $
+      shell $ "echo " ++ show s ++ " | xclip"
+
+genHuetone :: String -> [(Config, Config, Config)] -> Natural -> IO ()
+genHuetone n ht ts =
+  (toClipboard . encode) =<< genHuetone' n ht ts
