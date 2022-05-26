@@ -1,3 +1,4 @@
+# https://magnus.therning.org/2022-03-13-simple-nix-flake-for-haskell-development.html
 {
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs";
@@ -11,7 +12,7 @@
         t = lib.trivial;
         hl = haskell.lib;
 
-        name = "oklab";
+        name = "palette";
 
         project = devTools:
           let addBuildTools = (t.flip hl.addBuildTools) devTools;
