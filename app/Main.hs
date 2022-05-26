@@ -261,7 +261,7 @@ genHuetone n ts ht =
   (toClipboard . encode) =<< genHuetone' n ht ts
 
 mono :: (Config, Config, Config)
-mono = ((99, 30, ease InOutSine), (0, 0, id), (0, 0, id))
+mono = ((99, 25, ease InOutSine), (0.02, 0.15, id), (250, 250, id))
 
 red :: (Config, Config, Config)
 red = ((97, 36, id), (0.05, 0.75, \x -> -0.5 * cos (1.5 * pi * x + 0.2) + 0.5), (25, 25, id))
