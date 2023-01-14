@@ -260,26 +260,29 @@ genHuetone :: String -> Natural -> [(Config, Config, Config)] -> IO ()
 genHuetone n ts ht =
   (toClipboard . encode) =<< genHuetone' n ht ts
 
+gauss :: Double -> Double -> Double -> Double -> Double
+gauss a b c x = a * exp (-((x - b) ** 2) / (2 * c ** 2))
+
 mono :: (Config, Config, Config)
 mono = ((99, 15, ease InOutSine), (0.02, 0.04, id), (250, 250, id))
 
 red :: (Config, Config, Config)
-red = ((97, 25, id), (0.09, 0.85, \x -> -0.5 * cos (1.6 * pi * x + 0.4) + 0.4), (25, 25, id))
+red = ((97.5, 20, id), (-0.05, 1, \x -> 0.2 * x + gauss 0.62 0.43 0.22 x), (25, 25, id))
 
 orange :: (Config, Config, Config)
-orange = ((95, 30, id), (0.02, 0.7, \x -> -0.35 * cos (1.8 * pi * x + 0.5) + 0.18 * x + 0.4), (45, 45, id))
+orange = ((97.2, 20, id), (0, 1, \x -> 0.18 * x + gauss 0.5 0.42 0.2 x), (50, 45, id))
 
 gold :: (Config, Config, Config)
-gold = ((98, 25, id), (0.02, 0.5, \x -> -0.7 * cos (1.5 * pi * x + 1.7) + x), (75, 75, id))
+gold = ((98, 20, id), (0.02, 0.5, \x -> -0.7 * cos (1.5 * pi * x + 1.7) + 0.9 * x), (90, 75, id))
 
 green :: (Config, Config, Config)
-green = ((96, 30, id), (0.0, 0.35, \x -> -cos (1.4 * pi * x + 1.8) + 1.2 * x + 0.3), (150, 150, id))
+green = ((97.5, 20, id), (0.0, 0.35, \x -> -cos (1.4 * pi * x + 1.8) + 1.2 * x + 0.22), (150, 150, id))
 
 turquoise :: (Config, Config, Config)
-turquoise = ((95, 30, id), (0.0, 0.45, \x -> -0.6 * cos (1.5 * pi * x + 1.9) + 0.7 * x + 0.3), (170, 170, id))
+turquoise = ((97.5, 20, id), (0.0, 0.45, \x -> -0.7 * cos (1.5 * pi * x + 1.7) + 0.9 * x + 0.0), (170, 170, id))
 
 blue :: (Config, Config, Config)
-blue = ((95, 30, id), (0.05, 0.3, \x -> -cos (1.4 * pi * x + 1.1) + 0.9 * x + 0.6), (250, 250, id))
+blue = ((97.5, 20, id), (0, 1, \x -> 0.18 * x + gauss 0.50 0.46 0.21 x), (250, 250, id))
 
 lavender :: (Config, Config, Config)
-lavender = ((96, 25, id), (0.08, 0.4, \x -> -1.1 * cos (1.3 * pi * x + 0.7) + 0.8), (285, 285, id))
+lavender = ((97, 20, id), (0, 1, \x -> 0.18 * x + gauss 0.60 0.46 0.21 x), (310, 285, id))
