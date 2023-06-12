@@ -1,6 +1,6 @@
 # Why?
 
-My main objective was to have a hand-made color palette for my future NixOS setup. The problem is the majority of palette generators are so manual, simple. They work, but I wanted one that implements [oklch](https://bottosson.github.io/posts/oklab/). Yes, for my needs it's pointless but I'm bored.
+My main objective was to have a hand-made color palette for my ~future~ [NixOS setup](https://github.com/EzequielRamis/dotfiles). The problem is the majority of palette generators are so manual, simple. They work, but I wanted one that implements [oklch](https://bottosson.github.io/posts/oklab/). Yes, for my needs it's pointless but I'm bored.
 
 Fortunately, [that site exists](https://huetone.ardov.me) (thanks [@ardov](https://github.com/ardov)!) and has a very nice set of features; BUT, at the moment I'm with lots of colors, it's very tedious to modifiy its parameters, like the chroma. However, in there it's possible to paste a `.json`-structured palette and test it easily. The only thing I'd to do was to generate it.
 
